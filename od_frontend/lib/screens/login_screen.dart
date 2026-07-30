@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import 'passenger_home_screen.dart';
+import 'driver_home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,21 +16,49 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  void _login() {
+  final _authService = AuthService();
+
+  void _login() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Simulasi request API (Nanti diganti dengan API Laravel)
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _isLoading = false;
-      });
-      // Navigasi ke halaman utama berdasarkan role
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login Berhasil! (Simulasi)')),
-      );
+    final result = await _authService.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
     });
+
+    if (result['success']) {
+      // Navigasi berdasarkan role
+      final role = result['user']['role'];
+      if (role == 'driver') {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => DriverHomeScreen(user: result['user']),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => PassengerHomeScreen(user: result['user']),
+          ),
+        );
+      }
+    } else {
+      // Tampilkan error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -135,7 +167,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text('Belum punya akun? '),
                   TextButton(
                     onPressed: () {
-                      // TODO: Navigasi ke halaman pendaftaran
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const RegisterScreen(),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Daftar Sekarang',
